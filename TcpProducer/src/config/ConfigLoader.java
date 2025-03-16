@@ -9,7 +9,7 @@ public class ConfigLoader {
     private static final Properties config = new Properties();
 
     static {
-        try (InputStream input = new FileInputStream("TcpProducer/config.properties")) {
+        try (InputStream input = new FileInputStream("config.properties")) {
             config.load(input);
         } catch (IOException e) {
             throw new RuntimeException("Konfigürasyon dosyası yüklenemedi!", e);

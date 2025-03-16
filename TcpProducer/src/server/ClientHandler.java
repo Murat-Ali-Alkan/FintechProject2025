@@ -1,6 +1,6 @@
 package server;
 
-import utilitity.SubscriberManager;
+import service.SubscriberManager;
 
 import java.io.*;
 import java.net.Socket;
