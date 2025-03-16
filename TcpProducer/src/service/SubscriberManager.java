@@ -1,4 +1,4 @@
-package utilitity;
+package service;
 
 import config.ConfigLoader;
 

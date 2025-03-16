@@ -1,8 +1,8 @@
 package server;
 
 import config.ConfigLoader;
-import utilitity.ExchangeRateManager;
-import utilitity.SubscriberManager;
+import service.ExchangeRateManager;
+import service.SubscriberManager;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -35,6 +35,7 @@ public class TcpServer {
             try{
                 Thread.sleep(UPDATE_INTERVAL);
                 if(SubscriberManager.subscriberCount != 0) {
+
                     if(updateRateCount == 5) {
                         ExchangeRateManager.updateLargeRates();
                         SubscriberManager.notifySubscribers(true);
