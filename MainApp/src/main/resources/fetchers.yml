@@ -1,0 +1,16 @@
+fetchers:
+  - className: "com.murat.mainapp.fetcher.TcpDataFetcher"
+    platformName: "PF1"
+    userId: "admin"
+    password: "admin"
+    port: "8081"
+    baseUrl: "localhost"
+    currencyPairs: ["USDTRY","EURUSD"]
+
+  - className: "com.murat.mainapp.fetcher.RestDataFetcher"
+    platformName: "PF2"
+    userId: "admin"
+    password: "admin"
+    port: "8082"
+    baseUrl: "http://localhost:8082/api/rates/"
+    currencyPairs: ["USDTRY","EURUSD"]
