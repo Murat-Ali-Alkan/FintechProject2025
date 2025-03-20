@@ -23,6 +23,9 @@ public class TcpServer {
                 try(Socket clientSocket = serverSocket.accept()) {
                     new ClientHandler(clientSocket).handleClient();
                 }
+                catch (RuntimeException e) {
+                    e.printStackTrace();
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
