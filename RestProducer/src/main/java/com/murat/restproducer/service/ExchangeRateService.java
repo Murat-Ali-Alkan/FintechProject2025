@@ -97,28 +97,5 @@ public class ExchangeRateService {
         exchangeLargeRates.put(currencyPair, currencyRate);
     }
 
-//    public static double getRate(String currencyPair) {
-//        return exchangeRates.getOrDefault(currencyPair, 0.0);
-//    }
-//
-//    public static double getLargeRate(String currencyPair) {
-//        return exchangeLargeRates.getOrDefault(currencyPair, 0.0);
-//    }
-//
-//
-//    public static void updateRates() {
-//        exchangeRates.forEach((key, value) -> {
-//            double changeFactor = (random.nextDouble() * 2 -1) * 0.01;
-//            value = value * (1 + changeFactor);
-//            exchangeRates.put(key, value);
-//        });
-//    }
-//
-//    public static void updateLargeRates() {
-//        exchangeRates.forEach((key, value) -> {
-//            double changeFactor = (random.nextDouble() * 2 -1) * 0.015;
-//            value = value * (1 + changeFactor);
-//            exchangeLargeRates.put(key, value);
-//        });
-//    }
+
 }

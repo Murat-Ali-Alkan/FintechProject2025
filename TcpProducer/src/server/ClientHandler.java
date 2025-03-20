@@ -19,7 +19,21 @@ public class ClientHandler{
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
 
-            out.println("Connected To Server");
+            out.println("Connecting To Server");
+
+            out.println("Enter username");
+            String username = in.readLine();
+            out.println("Enter password");
+            String password = in.readLine();
+
+            if("admin".equals(username) && "admin".equals(password)){
+                out.println("OK");
+            }
+            else{
+                out.println("Invalid username or password");
+                throw new RuntimeException("Invalid username or password");
+            }
+
             out.println("To Exit : \"exit\"");
 
             String input;
