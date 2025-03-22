@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <!-- Konsola log basan appender -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss} - %c - [%M] - (%p) - %m - %n</Pattern>
+            </PatternLayout>
+        </Console>
+
+        <!-- Dosyaya log basan appender -->
+        <File name="KafkaFileLogger" fileName="logs/kafka.log">
+            <PatternLayout>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss} - %c - [%M] - (%p) - %m - %n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+        </File>
+    </Appenders>
+
+    <Loggers>
+        <!-- Genel loglar için root logger -->
+        <Root level="info">
+            <AppenderRef ref="Console"/>
+        </Root>
+
+        <!-- Kafka mesajları için özel logger -->
+        <Logger name="KafkaLogger" level="info" additivity="false">
+            <AppenderRef ref="KafkaFileLogger"/>
+        </Logger>
+    </Loggers>
+</Configuration>

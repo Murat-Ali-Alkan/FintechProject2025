@@ -1,0 +1,60 @@
+services:
+  filebeat:
+    image: docker.elastic.co/beats/filebeat-oss:7.12.1
+    container_name: filebeat
+    user: root
+    volumes:
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./logs/:/usr/share/logs/
+    networks:
+      - logging-network
+    command: ["filebeat", "-e", "--strict.perms=false"]
+
+  opensearch:
+    image: opensearchproject/opensearch:latest
+    container_name: opensearch
+    environment:
+      - discovery.type=single-node
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - bootstrap.memory_lock=true
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=Open123456789*
+    ports:
+      - "9200:9200" # OpenSearch API
+      - "9600:9600" # Performans izleme
+    networks:
+      - logging-network
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:latest
+    container_name: opensearch-dashboards
+    environment:
+      - OPENSEARCH_HOSTS=["https://opensearch:9200"]
+      - SERVER_HOST=0.0.0.0
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=Open123456789*
+    ports:
+      - "5601:5601" # OpenSearch Dashboards web arayüzü
+    networks:
+      - logging-network
+    depends_on:
+      - opensearch
+
+  logstash:
+    image: opensearchproject/logstash-oss-with-opensearch-output-plugin:latest
+    container_name: logstash
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5044:5044"
+      - "9700:9600" # Logstash'in monitoring portu
+    depends_on:
+      - opensearch
+      - filebeat
+    environment:
+      LS_JAVA_OPTS: "-Xms512m -Xmx512m"
+    networks:
+      - logging-network
+
+networks:
+  logging-network:
+    driver: bridge
