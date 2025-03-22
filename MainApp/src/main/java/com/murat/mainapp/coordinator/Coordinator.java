@@ -10,10 +10,12 @@ import com.murat.mainapp.fetcher.PlatformDataFetcher;
 import com.murat.mainapp.model.Rate;
 import com.murat.mainapp.model.RateFields;
 import com.murat.mainapp.model.RateStatus;
+import com.murat.mainapp.service.KafkaProducerService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
@@ -32,9 +34,9 @@ public class Coordinator implements PlatformDataCallback {
 //    @Autowired
 //    private RedisTemplate<String, String> redisTemplate;
 
-    // Kafka ile haberleşme (KafkaTemplate de Spring Boot tarafından konfigüre edilmiş olmalı)
-//    @Autowired
-//    private KafkaTemplate<String, String> kafkaTemplate;
+    //     Kafka ile haberleşme (KafkaTemplate de Spring Boot tarafından konfigüre edilmiş olmalı)
+    @Autowired
+    private KafkaProducerService kafkaProducerService;
 
 
     @PostConstruct
@@ -121,7 +123,9 @@ public class Coordinator implements PlatformDataCallback {
         String formattedBid = String.format("%.2f", rate.getBid());
         String formattedAsk = String.format("%.2f", rate.getAsk());
 
-        return platformName + "_"+ rateName +"|" + formattedBid + "|" + formattedAsk + "|" + rate.getTimestamp();
+        if(platformName!=null) { return  platformName + "_"+ rateName +"|" + formattedBid + "|" + formattedAsk + "|" + rate.getTimestamp();}
+
+        return rateName +"|" + formattedBid + "|" + formattedAsk + "|" + rate.getTimestamp();
     }
 
 
@@ -157,8 +161,12 @@ public class Coordinator implements PlatformDataCallback {
      */
     @Override
     public void onRateAvailable(String platformName, String rateName, Rate rate) {
-        logger.info("Rate available for platform {} - Rate {} = {} ", platformName, rateName, rate);
+        // Gelen veriyi ortak formata çevir
+        String formattedRate = formatRate(platformName, rateName, rate);
+        logger.info("Rate available: {}", formattedRate);
 
+        // Kafka’ya gönder (örneğin "rates_topic" adlı topic’e)
+        kafkaProducerService.sendMessage(formattedRate);
     }
 
     /**
@@ -168,7 +176,14 @@ public class Coordinator implements PlatformDataCallback {
      */
     @Override
     public void onRateUpdate(String platformName, String rateName, RateFields rateFields) {
-        logger.info("Update rate for platform {} - RateFields {} = {} ", platformName,rateName, rateFields.toString());
+        // RateFields verisini ortak Rate nesnesine çevirip formatla
+        Rate rate = rateFields.toRate();
+        String formattedRate = formatRate(platformName, rateName, rate);
+        logger.info("Rate update: {}", formattedRate);
+
+        // Kafka’ya gönder
+        kafkaProducerService.sendMessage(formattedRate);
+
     }
 
     /**
@@ -179,6 +194,6 @@ public class Coordinator implements PlatformDataCallback {
 
     @Override
     public void onRateStatus(String platformName, String rateName, RateStatus rateStatus) {
-
+        logger.info("Rate status for {} - {}: {}", platformName, rateName, rateStatus);
     }
 }
