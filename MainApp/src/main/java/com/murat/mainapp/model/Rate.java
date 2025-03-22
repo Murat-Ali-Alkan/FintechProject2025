@@ -1,6 +1,5 @@
 package com.murat.mainapp.model;
 
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,10 +18,9 @@ public class Rate {
 
     private String timestamp;
 
-    private RateStatus status;
 
     public RateFields toRateFields(){
-        return new RateFields(rateName, bid, ask, timestamp, status);
+        return new RateFields(rateName, bid, ask, timestamp);
     }
 
 

@@ -11,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
@@ -130,29 +131,33 @@ public class RestDataFetcher implements PlatformDataFetcher{
             public void run() {
                 try {
                     String url = baseUrl + "/" + platformName + "_" + rateName;
-                    Rate rate = restTemplate.getForObject(url, Rate.class);
+                    try {
+                        Rate rate = restTemplate.getForObject(url, Rate.class);
 
-                    if (rate != null) {
-                        if (firstCall.getAndSet(false)) {
-                            // İlk veri geldiğinde
-                            callback.onRateAvailable(platformName, rateName, rate);
+                        if (rate != null) {
+                            if (firstCall.getAndSet(false)) {
+                                // İlk veri geldiğinde
+                                callback.onRateAvailable(platformName, rateName, rate);
+                            } else {
+                                // Sonraki verilerde
+                                // Burada Rate'in RateFields ile uyumlu olduğunu varsayıyoruz.
+                                RateFields rateFields = rate.toRateFields();
+                                callback.onRateUpdate(platformName, rateName, rateFields);
+                            }
                         } else {
-                            // Sonraki verilerde
-                            // Burada Rate'in RateFields ile uyumlu olduğunu varsayıyoruz.
-                            RateFields rateFields = rate.toRateFields();
-                            callback.onRateUpdate(platformName, rateName, rateFields);
+                            logger.warn("No data received for {}. Unsubscribing...", rateName);
+                            unsubscribe(platformName, rateName);
                         }
-                    } else {
-                        logger.warn("No data received for {}. Unsubscribing...", rateName);
-                        unsubscribe(platformName, rateName);
+                    } catch (HttpClientErrorException ex) {
+                        if (ex.getStatusCode() == HttpStatus.NOT_FOUND) {
+                            logger.warn("Rate {} not found. Unsubscribing...", rateName);
+                            unsubscribe(platformName, rateName);
+                        } else {
+                            logger.error("Error fetching data for {}: {}", rateName, ex.getMessage());
+                        }
                     }
-                } catch (HttpClientErrorException ex) {
-                    if (ex.getStatusCode() == HttpStatus.NOT_FOUND) {
-                        logger.warn("Rate {} not found. Unsubscribing...", rateName);
-                        unsubscribe(platformName, rateName);
-                    } else {
-                        logger.error("Error fetching data for {}: {}", rateName, ex.getMessage());
-                    }
+                }catch (ResourceAccessException ex){
+                    logger.error("Error fetching data for {}: {}", rateName, ex.getMessage());
                 }
             }
         };
