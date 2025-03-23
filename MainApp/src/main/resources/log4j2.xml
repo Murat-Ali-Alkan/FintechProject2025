@@ -29,10 +29,10 @@
             <AppenderRef ref="FileLogger"/>
         </Root>
 
-        <!--        &lt;!&ndash;        &lt;!&ndash; Paket bazlı log seviyeleri &ndash;&gt;&ndash;&gt;-->
-        <!--        <Logger name="com.murat.mainapp" level="debug" additivity="false">-->
-        <!--            <AppenderRef ref="Console"/>-->
-        <!--            <AppenderRef ref="FileLogger"/>-->
-        <!--        </Logger>-->
+        <!--        &lt;!&ndash; Paket bazlı log seviyeleri &ndash;&gt;-->
+<!--        <Logger name="com.murat.mainapp.coordinator.Coordinator" level="info" additivity="false">-->
+<!--            <AppenderRef ref="Console"/>-->
+<!--            <AppenderRef ref="FileLogger"/>-->
+<!--        </Logger>-->
     </Loggers>
 </Configuration>

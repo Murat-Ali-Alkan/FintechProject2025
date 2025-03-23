@@ -1,0 +1,31 @@
+filebeat.inputs:
+  - type: log
+    paths:
+      - /usr/share/logs/*.log
+
+output.logstash:
+  hosts: ["logstash:5044"]
+  loadbalance: true
+
+queue.spool: file
+queue.mem:
+  events: 4096
+  flush.min_events: 512
+
+setup.template.name: "filebeat"
+setup.template.pattern: "filebeat-*"
+
+setup.template.enabled: true
+setup.ilm.enabled: false
+
+setup.kibana:
+  host: "https://opensearch-dashboards:5601"
+  username: "admin"
+  password: "Open123456789*"
+  ssl:
+    verification_mode: none
+
+xpack.monitoring.enabled: false
+xpack.management.enabled: false
+
+logging.level: info
