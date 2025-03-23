@@ -53,17 +53,11 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
+        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-log4j2 -->
         <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>2.20.0</version> <!-- En son kararlı sürümü kontrol edin -->
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <version>2.20.0</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-log4j2</artifactId>
+            <version>2.3.5.RELEASE</version>
         </dependency>
 
         <dependency>
