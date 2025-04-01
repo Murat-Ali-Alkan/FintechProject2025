@@ -16,6 +16,8 @@ import jakarta.annotation.PreDestroy;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
@@ -30,14 +32,17 @@ public class Coordinator implements PlatformDataCallback {
     // Dinamik olarak yüklenecek fetcher'lar
     private List<PlatformDataFetcher> fetchers = new ArrayList<>();
 
-    // Redis cache (RedisTemplate konfigürasyonu application.yml’de veya başka bir konfigürasyon sınıfında yapılmalıdır)
-//    @Autowired
-//    private RedisTemplate<String, String> redisTemplate;
+
+    private final CacheManager cacheManager;
 
     //     Kafka ile haberleşme (KafkaTemplate de Spring Boot tarafından konfigüre edilmiş olmalı)
-    @Autowired
-    private KafkaProducerService kafkaProducerService;
+    private final KafkaProducerService kafkaProducerService;
 
+
+    public Coordinator(CacheManager cacheManager, KafkaProducerService kafkaProducerService) {
+        this.cacheManager = cacheManager;
+        this.kafkaProducerService = kafkaProducerService;
+    }
 
     @PostConstruct
     public void init(){
@@ -123,9 +128,30 @@ public class Coordinator implements PlatformDataCallback {
         String formattedBid = String.format("%.2f", rate.getBid());
         String formattedAsk = String.format("%.2f", rate.getAsk());
 
-        if(platformName!=null) { return  platformName + "_"+ rateName +"|" + formattedBid + "|" + formattedAsk + "|" + rate.getTimestamp();}
+        if(platformName!=null) {
 
-        return rateName +"|" + formattedBid + "|" + formattedAsk + "|" + rate.getTimestamp();
+            Cache cache = cacheManager.getCache("raw_rates");
+            // Direkt Rate'de cache'lenebilir ?
+
+            String value = platformName + "_"+ rateName +"|" + formattedBid + "|" + formattedAsk + "|" + rate.getTimestamp();
+            if(cache != null) {
+                String key = String.format("%s:%s:%s", platformName, rateName,rate.getTimestamp());
+                cache.put(key, value);
+
+            }
+            return value;
+        }
+
+        Cache cache = cacheManager.getCache("calculated_rates");
+        String value = rateName +"|" + formattedBid + "|" + formattedAsk + "|" + rate.getTimestamp();
+
+        if(cache != null) {
+            String key = String.format("%s:%s:%s", platformName, rateName,rate.getTimestamp());
+            cache.put(key, value);
+        }
+
+        return value;
+
     }
 
 
