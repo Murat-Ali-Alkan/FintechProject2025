@@ -44,7 +44,8 @@ public class SubscriberManager {
         }
     }
 
-    public static void notifySubscribers(boolean isLargeUpdate) {
+    public static void
+    notifySubscribers(boolean isLargeUpdate) {
         for (Map.Entry<String, List<PrintWriter>> entry : subscribers.entrySet()) {
             String topic = entry.getKey();
             double rate = 0.0;

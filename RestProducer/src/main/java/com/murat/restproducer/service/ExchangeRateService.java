@@ -14,7 +14,7 @@ public class ExchangeRateService {
     private static final Map<String,Double> exchangeLargeRates = new HashMap<>();
     private static final Random random = new Random();
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
-    private static final int NUMBER_OF_MAX_UPDATES = Integer.parseInt(ConfigLoader.getProperty("update.maxNumberOfTimes","5"));
+    private static final int NUMBER_OF_MAX_UPDATES = Integer.parseInt(ConfigLoader.getProperty("update.maxNumberOfTimes","15"));
     public static int USDTRYUpdates = 0;
     public static int EURUSDUpdates = 0;
 

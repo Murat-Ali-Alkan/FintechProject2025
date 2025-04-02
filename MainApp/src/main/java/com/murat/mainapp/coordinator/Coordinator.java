@@ -10,6 +10,7 @@ import com.murat.mainapp.fetcher.PlatformDataFetcher;
 import com.murat.mainapp.model.Rate;
 import com.murat.mainapp.model.RateFields;
 import com.murat.mainapp.model.RateStatus;
+import com.murat.mainapp.service.CurrencyService;
 import com.murat.mainapp.service.KafkaProducerService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -21,8 +22,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Component
 public class Coordinator implements PlatformDataCallback {
@@ -39,14 +39,27 @@ public class Coordinator implements PlatformDataCallback {
     private final KafkaProducerService kafkaProducerService;
 
 
-    public Coordinator(CacheManager cacheManager, KafkaProducerService kafkaProducerService) {
+    private final Timer timer = new Timer();
+
+    private final Set<String> platformNames = new HashSet<>();
+
+    private final Map<String,String> ratePlatformNames = new HashMap<>();
+
+    private final Set<String> rateNames = new HashSet<>();
+
+    private final CurrencyService currencyService;
+
+
+    public Coordinator(CacheManager cacheManager, KafkaProducerService kafkaProducerService, CurrencyService currencyService) {
         this.cacheManager = cacheManager;
         this.kafkaProducerService = kafkaProducerService;
+        this.currencyService = currencyService;
     }
 
     @PostConstruct
     public void init(){
         logger.info("Initializing Coordinator");
+        setCalculateTimer();
 
         try{
             // fetchers.yml dosyasını classpath'ten oku
@@ -115,6 +128,7 @@ public class Coordinator implements PlatformDataCallback {
         for (PlatformDataFetcher fetcher : fetchers) {
             fetcher.disconnect("dummy", "dummy", "dummy"); // Parametreler fetcher'a göre düzenlenebilir.
         }
+        timer.cancel();
     }
 
 
@@ -129,29 +143,104 @@ public class Coordinator implements PlatformDataCallback {
         String formattedAsk = String.format("%.2f", rate.getAsk());
 
         if(platformName!=null) {
+            return platformName + "_"+ rateName +"|" + formattedBid + "|" + formattedAsk + "|" + rate.getTimestamp();
+        }
 
-            Cache cache = cacheManager.getCache("raw_rates");
-            // Direkt Rate'de cache'lenebilir ?
+        return rateName +"|" + formattedBid + "|" + formattedAsk + "|" + rate.getTimestamp();
 
-            String value = platformName + "_"+ rateName +"|" + formattedBid + "|" + formattedAsk + "|" + rate.getTimestamp();
-            if(cache != null) {
-                String key = String.format("%s:%s:%s", platformName, rateName,rate.getTimestamp());
-                cache.put(key, value);
+    }
 
+
+
+    public void tryCalculate() {
+        Cache cache = cacheManager.getCache("raw_rates");
+
+        if(cache ==null)
+            return;
+
+        List<Rate> rates = new ArrayList<>();
+
+        platformNames.forEach(platformName -> {
+            rateNames.forEach(name -> {
+                Rate rate = cache.get(platformName + "_" +name , Rate.class);
+                if (rate != null) {
+                    cache.evict(platformName + "_" +name );
+                    rates.add(rate);
+                }
+            });
+        });
+
+        if (rates.isEmpty())
+            return;
+
+        List<Rate> rateUSDTRY = rates.stream().filter(rate -> rate.getRateName().contains("USDTRY")).toList();
+        List<Rate> rateEURUSD = rates.stream().filter(rate -> rate.getRateName().contains("EURUSD")).toList();
+        // rateGBPUSD ?
+
+        Rate usdTRY;
+        Rate eurTRY;
+
+        Cache calculatedCache = cacheManager.getCache("calculated_rates");
+        if(rateUSDTRY.size()>1){
+            usdTRY  = currencyService.calculateUSDTRY(rateUSDTRY.get(0),rateUSDTRY.get(1));
+
+            calculatedCache.put(usdTRY.getRateName(), usdTRY);
+            String formattedUSDTRY = formatRate(null,usdTRY.getRateName(),usdTRY);
+            logger.info("Calculated Rate available: {}", formattedUSDTRY);
+            kafkaProducerService.sendMessage(formattedUSDTRY);
+
+            if(rateEURUSD.size()>1){
+                eurTRY = currencyService.calculateEURTRY(usdTRY,rateEURUSD.get(0),rateEURUSD.get(1));
+                calculatedCache.put(eurTRY.getRateName(), eurTRY);
+                String formattedEURTRY = formatRate(null,eurTRY.getRateName(),eurTRY);
+                logger.info("Calculated Rate available: {}", formattedEURTRY);
+                kafkaProducerService.sendMessage(formattedEURTRY);
             }
-            return value;
+            else if (rateEURUSD.size()==1){
+                eurTRY = currencyService.calculateEURTRY(usdTRY,rateEURUSD.get(0),null);
+                calculatedCache.put(eurTRY.getRateName(), eurTRY);
+                String formattedEURTRY = formatRate(null,eurTRY.getRateName(),eurTRY);
+                logger.info("Calculated Rate available: {}", formattedEURTRY);
+                kafkaProducerService.sendMessage(formattedEURTRY);
+            }
+
+        }
+        else if (rateUSDTRY.size() ==1){
+            usdTRY = currencyService.calculateUSDTRY(rateUSDTRY.get(0),null);
+            calculatedCache.put(usdTRY.getRateName(), usdTRY);
+            String formattedUSDTRY = formatRate(null,usdTRY.getRateName(),usdTRY);
+            logger.info("Calculated Rate available: {}", formattedUSDTRY);
+            kafkaProducerService.sendMessage(formattedUSDTRY);
+
+            if(rateEURUSD.size()>1){
+                eurTRY = currencyService.calculateEURTRY(usdTRY,rateEURUSD.get(0),rateEURUSD.get(1));
+                calculatedCache.put(eurTRY.getRateName(), eurTRY);
+                String formattedEURTRY = formatRate(null,eurTRY.getRateName(),eurTRY);
+                logger.info("Calculated Rate available: {}", formattedEURTRY);
+                kafkaProducerService.sendMessage(formattedEURTRY);
+            }
+            else if (rateEURUSD.size()==1){
+                eurTRY = currencyService.calculateEURTRY(usdTRY,rateEURUSD.get(0),null);
+                calculatedCache.put(eurTRY.getRateName(), eurTRY);
+                String formattedEURTRY = formatRate(null,eurTRY.getRateName(),eurTRY);
+                logger.info("Calculated Rate available: {}", formattedEURTRY);
+                kafkaProducerService.sendMessage(formattedEURTRY);
+            }
+            
         }
 
-        Cache cache = cacheManager.getCache("calculated_rates");
-        String value = rateName +"|" + formattedBid + "|" + formattedAsk + "|" + rate.getTimestamp();
 
-        if(cache != null) {
-            String key = String.format("%s:%s:%s", platformName, rateName,rate.getTimestamp());
-            cache.put(key, value);
-        }
+    }
 
-        return value;
 
+    private void setCalculateTimer() {
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                    tryCalculate();
+            }
+        };
+        timer.scheduleAtFixedRate(task, 30000, 10000);
     }
 
 
@@ -164,6 +253,7 @@ public class Coordinator implements PlatformDataCallback {
     public void onConnect(String platformName, boolean status) {
         if(status){
             logger.info("Connected to platform " + platformName);
+            platformNames.add(platformName);
         }
         else{
             throw new ConnectionNotFoundException("Error connecting to platform " + platformName);
@@ -178,6 +268,7 @@ public class Coordinator implements PlatformDataCallback {
     @Override
     public void onDisconnect(String platformName, boolean status) {
         logger.info("Disconnected from platform {} with status {}", platformName, status);
+        platformNames.remove(platformName);
     }
 
     /**
@@ -187,6 +278,15 @@ public class Coordinator implements PlatformDataCallback {
      */
     @Override
     public void onRateAvailable(String platformName, String rateName, Rate rate) {
+
+        rateNames.add(rateName);
+
+        Cache cache = cacheManager.getCache("raw_rates");
+        if(cache != null) {
+            String key = String.format("%s_%s", platformName, rateName);
+            cache.put(key, rate);
+        }
+
         // Gelen veriyi ortak formata çevir
         String formattedRate = formatRate(platformName, rateName, rate);
         logger.info("Rate available: {}", formattedRate);
@@ -202,8 +302,15 @@ public class Coordinator implements PlatformDataCallback {
      */
     @Override
     public void onRateUpdate(String platformName, String rateName, RateFields rateFields) {
-        // RateFields verisini ortak Rate nesnesine çevirip formatla
+
         Rate rate = rateFields.toRate();
+
+        Cache cache = cacheManager.getCache("raw_rates");
+        if(cache != null) {
+            String key = String.format("%s_%s", platformName, rateName);
+            cache.put(key, rate);
+        }
+
         String formattedRate = formatRate(platformName, rateName, rate);
         logger.info("Rate update: {}", formattedRate);
 
@@ -221,5 +328,6 @@ public class Coordinator implements PlatformDataCallback {
     @Override
     public void onRateStatus(String platformName, String rateName, RateStatus rateStatus) {
         logger.info("Rate status for {} - {}: {}", platformName, rateName, rateStatus);
+
     }
 }
