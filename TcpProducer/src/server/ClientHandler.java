@@ -34,15 +34,24 @@ public class ClientHandler {
                 this.out.println("Invalid username or password");
                 throw new RuntimeException("Invalid username or password");
             }
+            System.out.println("Client authorized");
 
             this.out.println("OK");
             this.out.println("To Exit : \"exit\"");
 
+            System.out.println("Listening for new messages");
             String input;
-            while((input = this.in.readLine()) != null) {
-                boolean isExit = this.handleCommand(input);
-                if (isExit) {
+            while(true) {
+                if(socket.isClosed()) {
                     break;
+                }
+                if((input = this.in.readLine()) != null) {
+                    System.out.println(input);
+                    boolean isExit = this.handleCommand(input);
+                    if (isExit) {
+                        socket.close();
+                        break;
+                    }
                 }
             }
         } catch (IOException e) {
@@ -53,7 +62,6 @@ public class ClientHandler {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
         }
 
     }
@@ -72,6 +80,7 @@ public class ClientHandler {
             try {
                 this.in.close();
                 this.out.close();
+                socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }

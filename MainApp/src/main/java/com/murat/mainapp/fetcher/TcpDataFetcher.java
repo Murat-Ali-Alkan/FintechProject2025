@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class TcpDataFetcher implements  PlatformDataFetcher {
 
     private static final Logger logger = LogManager.getLogger(TcpDataFetcher.class);
+    private static int responseCount = 0;
 
     private int port;
     private String baseUrl;
@@ -116,16 +117,18 @@ public class TcpDataFetcher implements  PlatformDataFetcher {
                 try {
                     String response;
                     while (connected && (response = in.readLine()) != null) {
-                        logger.info("Received message: {}", response);
                         String[] tokens = response.split("\\|");
                         if (tokens.length < 4) {
-                            logger.warn("Invalid message format: {}", response);
+                            logger.info(response);
                             continue;
                         }
                         Rate rate = parseRateFromMessage(tokens);
-                        // Burada, mesajların ilk mi yoksa güncelleme mi olduğunu ayırt edebilirsiniz.
-                        // Örneğin, her gelen mesajı onRateUpdate olarak iletebiliriz.
+                        if(responseCount < 2){
+                            callback.onRateAvailable(platformName,rate.getRateName(),rate);
+                            responseCount++;
+                        }else{
                         callback.onRateUpdate(platformName, rate.getRateName(), rate.toRateFields());
+                        }
                     }
                 } catch (Exception e) {
                     logger.error("Error in reader thread: {}", e.getMessage());
@@ -198,7 +201,7 @@ public class TcpDataFetcher implements  PlatformDataFetcher {
         };
 
         subscriptionTasks.put(rateName, task);
-        timer.schedule(task, 1000);  // 1 saniye gecikmeyle gönderilir.
+        timer.schedule(task, 1);  // 5 saniye gecikmeyle gönderilir.
     }
 
 

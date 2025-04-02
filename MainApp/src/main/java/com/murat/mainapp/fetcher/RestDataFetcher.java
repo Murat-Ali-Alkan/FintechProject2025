@@ -77,6 +77,7 @@ public class RestDataFetcher implements PlatformDataFetcher{
 //
 //        restTemplate.getInterceptors().add(new BasicAuthenticationInterceptor(userId, password));
         connected = true;
+        callback.onConnect(platformName,true);
 //        log.info("Connected to platform: {}", platformName);
     }
 
@@ -164,7 +165,7 @@ public class RestDataFetcher implements PlatformDataFetcher{
 
         // TimerTask'i hem planla hem de map'e ekle
         subscriptionTasks.put(rateName, task);
-        timer.scheduleAtFixedRate(task, 6000, 5000);
+        timer.scheduleAtFixedRate(task, 25000, 30000);
 
     }
 
