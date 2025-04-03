@@ -282,9 +282,14 @@ public class Coordinator implements PlatformDataCallback {
         rateNames.add(rateName);
 
         Cache cache = cacheManager.getCache("raw_rates");
-        if(cache != null) {
+        Cache rateCheckCache = cacheManager.getCache("rate_check");
+        if(cache != null && rateCheckCache != null) {
             String key = String.format("%s_%s", platformName, rateName);
             cache.put(key, rate);
+            rateCheckCache.put(key, rate);
+        }
+        else{
+            logger.error("Rate available but no cache found for platform {}", platformName);
         }
 
         // Gelen veriyi ortak formata çevir
@@ -306,9 +311,21 @@ public class Coordinator implements PlatformDataCallback {
         Rate rate = rateFields.toRate();
 
         Cache cache = cacheManager.getCache("raw_rates");
-        if(cache != null) {
+        Cache rateCheckCache = cacheManager.getCache("rate_check");
+        if(cache != null && rateCheckCache != null) {
             String key = String.format("%s_%s", platformName, rateName);
+            Rate oldRate = rateCheckCache.get(key,Rate.class);
+
+            if(isRateChangeAbnormal(oldRate,rate)){
+                logger.info("Rate {} change abnormal for platform {} old value : {} new value : {}",rateName, platformName,oldRate.getBid(),rate.getBid());
+                return;
+            }
+
             cache.put(key, rate);
+            rateCheckCache.put(key, rate);
+        }
+        else{
+            logger.error("Rate available but no cache found for platform {}", platformName);
         }
 
         String formattedRate = formatRate(platformName, rateName, rate);
@@ -328,6 +345,18 @@ public class Coordinator implements PlatformDataCallback {
     @Override
     public void onRateStatus(String platformName, String rateName, RateStatus rateStatus) {
         logger.info("Rate status for {} - {}: {}", platformName, rateName, rateStatus);
+
+    }
+
+    private boolean isRateChangeAbnormal(Rate oldRate, Rate newRate) {
+        double oldBid = oldRate.getBid();
+        double newBid = newRate.getBid();
+
+        double difference = newBid - oldBid;
+
+        double percentChange = difference / Math.abs(oldBid);
+
+        return Math.abs(percentChange) > 0.01;
 
     }
 }
