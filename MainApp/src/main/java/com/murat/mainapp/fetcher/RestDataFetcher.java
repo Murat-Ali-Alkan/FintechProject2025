@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
-public class RestDataFetcher implements PlatformDataFetcher{
+public class RestDataFetcher extends PlatformDataFetcherAbstract{
 
     private static final Logger logger = LogManager.getLogger(RestDataFetcher.class);
     private int port;
@@ -102,6 +102,7 @@ public class RestDataFetcher implements PlatformDataFetcher{
         subscriptionTasks.clear();
         timer.cancel();
         connected = false;
+        callback.onDisconnect(platformName,true);
         logger.info("Disconnected from {}", platformName);
     }
 

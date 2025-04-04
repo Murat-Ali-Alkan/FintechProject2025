@@ -6,7 +6,7 @@ import com.murat.mainapp.callback.PlatformDataCallback;
 import com.murat.mainapp.config.FetcherConfig;
 import com.murat.mainapp.config.FetchersConfig;
 import com.murat.mainapp.exception.ConnectionNotFoundException;
-import com.murat.mainapp.fetcher.PlatformDataFetcher;
+import com.murat.mainapp.fetcher.PlatformDataFetcherAbstract;
 import com.murat.mainapp.model.Rate;
 import com.murat.mainapp.model.RateFields;
 import com.murat.mainapp.model.RateStatus;
@@ -30,7 +30,7 @@ public class Coordinator implements PlatformDataCallback {
     private static final Logger logger = LogManager.getLogger(Coordinator.class);
 
     // Dinamik olarak yüklenecek fetcher'lar
-    private List<PlatformDataFetcher> fetchers = new ArrayList<>();
+    private List<PlatformDataFetcherAbstract> fetchers = new ArrayList<>();
 
 
     private final CacheManager cacheManager;
@@ -78,12 +78,15 @@ public class Coordinator implements PlatformDataCallback {
             for(FetcherConfig fc : config.getFetchers()){
                 // Belirtilen sinifi reflection ile yukle
                 Class<?> clazz = Class.forName(fc.getClassName());
-                PlatformDataFetcher fetcher = (PlatformDataFetcher) clazz.getDeclaredConstructor().newInstance();
+                PlatformDataFetcherAbstract fetcher = (PlatformDataFetcherAbstract) clazz.getDeclaredConstructor().newInstance();
 
                 // Önemli: fetcher sınıfı callback için setCallback metodunu sunmalıdır
                 fetcher.setCallback(this);
                 fetcher.setPort(fc.getPort()); // Buna gerek olmayabilir
                 fetcher.setBaseUrl(fc.getBaseUrl());
+                fetcher.setPlatformName(fc.getPlatformName());
+                fetcher.setUserId(fc.getUserId());
+                fetcher.setPassword(fc.getPassword());
 
 
                 //Bağlantıyı kur
@@ -125,8 +128,8 @@ public class Coordinator implements PlatformDataCallback {
     @PreDestroy
     public void shutdown() {
         logger.info("Shutting down Coordinator");
-        for (PlatformDataFetcher fetcher : fetchers) {
-            fetcher.disconnect("dummy", "dummy", "dummy"); // Parametreler fetcher'a göre düzenlenebilir.
+        for (PlatformDataFetcherAbstract fetcher : fetchers) {
+            fetcher.disconnect(fetcher.getPlatformName(),fetcher.getUserId(),fetcher.getPassword()); // Parametreler fetcher'a göre düzenlenebilir.
         }
         timer.cancel();
     }

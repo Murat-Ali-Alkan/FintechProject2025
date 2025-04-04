@@ -21,9 +21,10 @@ public class SubscriberManager {
                 subscribers.computeIfAbsent(topic, k -> new ArrayList<>()).add(out);
                 subscriberCount++;
                 out.println("Subscribed to " + topic);
+                System.out.println("subscribed to " + topic);
             }
             else{
-                out.println("INFO|You already have a subscription for" + topic);
+                out.println("INFO|You already have a subscription for " + topic);
             }
         }
     }
@@ -34,8 +35,10 @@ public class SubscriberManager {
         }
         else {
             if(subscribers.containsKey(topic)){
+                subscribers.remove(topic);
                 subscribers.getOrDefault(topic, new ArrayList<>()).remove(out);
                 out.println("Unsubscribed from " + topic);
+                System.out.println("Unsubscribed from " + topic);
                 subscriberCount--;
             }
             else{

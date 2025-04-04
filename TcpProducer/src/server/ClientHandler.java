@@ -49,8 +49,13 @@ public class ClientHandler {
                     System.out.println(input);
                     boolean isExit = this.handleCommand(input);
                     if (isExit) {
-                        socket.close();
-                        break;
+                        try {
+                            this.in.close();
+                            this.out.close();
+                            socket.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
             }
@@ -77,13 +82,7 @@ public class ClientHandler {
         } else if (command.equals("exit")) {
             isExit = true;
 
-            try {
-                this.in.close();
-                this.out.close();
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+
         } else {
             this.out.println("ERROR|Invalid request format");
         }
