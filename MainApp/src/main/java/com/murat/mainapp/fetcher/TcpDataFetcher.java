@@ -16,11 +16,11 @@ import java.net.Socket;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
-public class TcpDataFetcher implements  PlatformDataFetcher {
+public class TcpDataFetcher extends PlatformDataFetcherAbstract {
 
     private static final Logger logger = LogManager.getLogger(TcpDataFetcher.class);
     private static int responseCount = 0;
@@ -154,7 +154,6 @@ public class TcpDataFetcher implements  PlatformDataFetcher {
         subscriptionTasks.forEach((rateName, task) -> {
             unsubscribe(platformName, rateName);
             task.cancel();
-            logger.info("Unsubscribed from {}", rateName);
         });
 
         subscriptionTasks.clear();
@@ -261,25 +260,27 @@ public class TcpDataFetcher implements  PlatformDataFetcher {
             return;
         }
 
-        logger.info("Unsubscribing from {}", rateName);
+        logger.info("Unsubscribing from platform {} rate {} ",platformName, rateName);
 
-        // Unsubscribe komutunu yalnızca 1 kere göndermek için
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    out.println("unsubscribe|" + platformName + "_" + rateName);
-                    logger.info("Sent unsubscribe command for rate: {}", rateName);
-                    subscribedRates.remove(rateName); // Abonelik listesinden çıkar
-                } catch (Exception e) {
-                    logger.error("Error during unsubscribe: {}", e.getMessage());
-                }
-                // Gönderim tamamlandıktan sonra task iptal edilir.
-                this.cancel();
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        Future<?> future = executor.schedule(() -> {
+            try {
+                out.println("unsubscribe|" + platformName + "_" + rateName);
+                logger.info("Sent unsubscribe command for rate: {}", rateName);
+                subscribedRates.remove(rateName);
+                logger.info("Unsubscribed from platform {} rate {} ", platformName, rateName);
+            } catch (Exception e) {
+                logger.error("Error during unsubscribe: {}", e.getMessage());
             }
-        };
+        }, 1000, TimeUnit.MILLISECONDS);
 
-        timer.schedule(task, 1000);  // 1 saniye gecikmeyle gönderilir.
+        try {
+            future.get();
+        } catch (Exception e) {
+            logger.error("Couldn't unsubscribe from {}_{}", platformName, rateName);
+        } finally {
+            executor.shutdown();
+        }
     }
 }
 
