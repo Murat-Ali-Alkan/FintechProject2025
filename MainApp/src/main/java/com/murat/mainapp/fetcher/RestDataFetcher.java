@@ -4,11 +4,9 @@ import com.murat.mainapp.callback.PlatformDataCallback;
 import com.murat.mainapp.exception.ConnectionNotFoundException;
 import com.murat.mainapp.model.Rate;
 import com.murat.mainapp.model.RateFields;
-import com.murat.mainapp.model.RateStatus;
-import lombok.AllArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
@@ -31,7 +29,7 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
     private String userId;
     private String password;
     private boolean connected = false;
-
+    private HttpEntity<String> requestEntity;
 
     private final Timer timer = new Timer();
     private final RestTemplate restTemplate = new RestTemplate();
@@ -71,11 +69,23 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
      */
     @Override
     public void connect(String platformName, String userId, String password) {
-//        this.platformName = platformName;
-//        this.userId = userId;
-//        this.password = password;
-//
-//        restTemplate.getInterceptors().add(new BasicAuthenticationInterceptor(userId, password));
+
+        String token = sendTokenRequest();
+
+        if(token != null) {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization","Bearer " +token );
+            requestEntity = new HttpEntity<>(headers);
+            connected = true;
+            callback.onConnect(platformName,true);
+        }
+        else{
+            connected = false;
+            callback.onConnect(platformName,false);
+        }
+
+
+
         connected = true;
         callback.onConnect(platformName,true);
 //        log.info("Connected to platform: {}", platformName);
@@ -132,9 +142,14 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
             @Override
             public void run() {
                 try {
-                    String url = baseUrl + "/" + platformName + "_" + rateName;
+                    String url = baseUrl + "api/rates/" + platformName + "_" + rateName;
                     try {
-                        Rate rate = restTemplate.getForObject(url, Rate.class);
+                        Rate rate = restTemplate.exchange(
+                                url,
+                                HttpMethod.GET,
+                                        requestEntity,
+                                Rate.class)
+                                .getBody();
 
                         if (rate != null) {
                             if (firstCall.getAndSet(false)) {
@@ -185,5 +200,25 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
         } else {
             logger.warn("No active subscription found for {}", rateName);
         }
+    }
+
+    public String sendTokenRequest() {
+        String url = this.baseUrl + "token";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBasicAuth("admin", "admin");
+
+        HttpEntity<?> requestEntity = new HttpEntity<>(headers);
+
+        ResponseEntity<String> responseEntity = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                requestEntity,
+                String.class
+        );
+        String token = responseEntity.getBody();
+
+        System.out.println(token);
+        return token;
     }
 }

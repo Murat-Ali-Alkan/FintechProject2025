@@ -41,7 +41,7 @@ public class TcpServer {
                 Thread.sleep(UPDATE_INTERVAL);
                 if(SubscriberManager.subscriberCount != 0) {
 
-                    if(updateRateCount == 5) {
+                    if(updateRateCount == 3) {
                         ExchangeRateManager.updateLargeRates();
                         SubscriberManager.notifySubscribers(true);
                         updateRateCount = 0;
