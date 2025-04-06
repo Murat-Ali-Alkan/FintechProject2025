@@ -39,7 +39,7 @@ public class ExchangeRateManager {
 
     public static void updateLargeRates() {
         exchangeRates.forEach((key, value) -> {
-            double changeFactor = (random.nextDouble() * 2 -1) * 0.015;
+            double changeFactor = (random.nextDouble() * 2 -1) * 0.02;
             value = value * (1 + changeFactor);
             exchangeLargeRates.put(key, value);
         });
