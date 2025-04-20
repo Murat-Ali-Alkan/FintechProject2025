@@ -32,6 +32,8 @@ public class Coordinator implements PlatformDataCallback {
     // Dinamik olarak yüklenecek fetcher'lar
     private List<PlatformDataFetcherAbstract> fetchers = new ArrayList<>();
 
+    private List<FetcherConfig> fetchersConfigs = new ArrayList<>();
+
 
     private final CacheManager cacheManager;
 
@@ -77,6 +79,7 @@ public class Coordinator implements PlatformDataCallback {
 
             for(FetcherConfig fc : config.getFetchers()){
                 // Belirtilen sinifi reflection ile yukle
+                fetchersConfigs.add(fc);
                 Class<?> clazz = Class.forName(fc.getClassName());
                 PlatformDataFetcherAbstract fetcher = (PlatformDataFetcherAbstract) clazz.getDeclaredConstructor().newInstance();
 
@@ -88,6 +91,7 @@ public class Coordinator implements PlatformDataCallback {
                 fetcher.setUserId(fc.getUserId());
                 fetcher.setPassword(fc.getPassword());
 
+                fetchers.add(fetcher);
 
                 //Bağlantıyı kur
                 logger.info("Connecting to platform " + fc.getPlatformName());
@@ -96,20 +100,7 @@ public class Coordinator implements PlatformDataCallback {
                     fetcher.connect(fc.getPlatformName(), fc.getUserId(), fc.getPassword());
                     logger.info("Connected to platform " + fc.getPlatformName());
 
-                    //Abone ol
-                    try {
-                        for (String currency : fc.getCurrencyPairs()) {
-                            fetcher.subscribe(fc.getPlatformName(), currency);
-                            logger.info("Subscribed to platform " + fc.getPlatformName());
-                        }
-                        logger.info("Adding fetcher " + fc.getClassName());
-                        fetchers.add(fetcher);
-
-                        logger.info("Registered Fetcher " + fc.getClassName());
-
-                    }catch (Exception e){
-                        logger.error("Error subscribing to platform " + fc.getPlatformName());
-                    }
+                    logger.info("Adding fetcher " + fc.getClassName());
 
                 }
                 catch(ConnectionNotFoundException e){
@@ -257,6 +248,28 @@ public class Coordinator implements PlatformDataCallback {
         if(status){
             logger.info("Connected to platform " + platformName);
             platformNames.add(platformName);
+            fetchersConfigs.stream().filter(config -> config.getPlatformName().equals(platformName)).findFirst()
+                    .ifPresent(config -> {
+                        //Abone ol
+                        try {
+                            Optional<PlatformDataFetcherAbstract> fetcherOptional = fetchers.stream()
+                                    .filter(f -> f.getPlatformName().equalsIgnoreCase(config.getPlatformName()))
+                                    .findFirst();
+                            if(fetcherOptional.isPresent()){
+                                PlatformDataFetcherAbstract fetcher = fetcherOptional.get();
+                                for (String currency : config.getCurrencyPairs()) {
+                                    fetcher.subscribe(config.getPlatformName(), currency);
+                                    logger.info("Subscribed to platform {} , currency {} " + config.getPlatformName(),currency);
+                                }
+                                logger.info("Registered Fetcher " + config.getClassName());
+                            }
+                            else{
+                                logger.error("Error subscribing to platform " + config.getPlatformName());
+                            }
+                        }catch (Exception e){
+                            logger.error("Error subscribing to platform " + config.getPlatformName());
+                        }
+                    });
         }
         else{
             throw new ConnectionNotFoundException("Error connecting to platform " + platformName);
