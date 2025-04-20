@@ -84,11 +84,6 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
             callback.onConnect(platformName,false);
         }
 
-
-
-        connected = true;
-        callback.onConnect(platformName,true);
-//        log.info("Connected to platform: {}", platformName);
     }
 
     /**
@@ -130,11 +125,11 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
 
         // Eğer aynı rateName için zaten bir abonelik varsa, tekrar abone olmaya gerek yok
         if (subscriptionTasks.containsKey(rateName)) {
-            logger.warn("Already subscribed to {}", rateName);
+            logger.warn("Already subscribed to {} {}",platformName, rateName);
             return;
         }
         // İlk çağrı kontrolü için AtomicBoolean
-        logger.info("Subscribing to {}", rateName);
+        logger.info("Subscribing to {} {}",platformName, rateName);
 
         final AtomicBoolean firstCall = new AtomicBoolean(true);
 
