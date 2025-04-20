@@ -19,8 +19,8 @@ services:
       - bootstrap.memory_lock=true
       - OPENSEARCH_INITIAL_ADMIN_PASSWORD=Open123456789*
     ports:
-      - "9200:9200" # OpenSearch API
-      - "9600:9600" # Performans izleme
+      - "9201:9200" # OpenSearch API
+      - "9601:9600" # Performans izleme
     networks:
       - logging-network
 
@@ -33,7 +33,7 @@ services:
       - OPENSEARCH_USERNAME=admin
       - OPENSEARCH_PASSWORD=Open123456789*
     ports:
-      - "5601:5601" # OpenSearch Dashboards web arayüzü
+      - "5602:5601" # OpenSearch Dashboards web arayüzü
     networks:
       - logging-network
     depends_on:
@@ -45,8 +45,8 @@ services:
     volumes:
       - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
     ports:
-      - "5044:5044"
-      - "9700:9600" # Logstash'in monitoring portu
+      - "5045:5044"
+      - "9701:9600" # Logstash'in monitoring portu
     depends_on:
       - opensearch
       - filebeat
