@@ -15,7 +15,7 @@ public class KafkaConsumerService {
         this.rateRepository = rateRepository;
     }
 
-    @KafkaListener(topics = "rates_topic", groupId = "rate-group")
+    @KafkaListener(topics = "test-topic", groupId = "rate-group")
     public void listen(String message) {
         System.out.println("Alınan mesaj: " + message);
         Rate rate = stringToRate(message);
