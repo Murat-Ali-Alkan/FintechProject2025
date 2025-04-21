@@ -19,6 +19,16 @@ import java.util.TimerTask;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * The {@code TcpDataFetcher} class is responsible for fetching data from a platform over TCP.
+ * It extends {@link PlatformDataFetcherAbstract} and implements functionalities such as connecting
+ * to the platform, reading data, subscribing to rates, and unsubscribing.
+ *
+ * <p>Note: This class uses a {@link Timer} and {@link TimerTask} for scheduling subscriptions.</p>
+ *
+ * @see Timer
+ * @see TimerTask
+ */
 @Component
 public class TcpDataFetcher extends PlatformDataFetcherAbstract {
 
@@ -40,8 +50,11 @@ public class TcpDataFetcher extends PlatformDataFetcherAbstract {
     private final Timer timer = new Timer();
     private final RestTemplate restTemplate = new RestTemplate();
 
-    // Her rateName için TimerTask referanslarını tutan map
+    /**
+     * Map of {@link TimerTask}s is used for holding information of subscriptions.
+     */
     private final Map<String, TimerTask> subscriptionTasks = new ConcurrentHashMap<>();
+
     // Abone olunan rate'leri işaretlemek için
     private final Map<String, Boolean> subscribedRates = new ConcurrentHashMap<>();
 
@@ -51,7 +64,9 @@ public class TcpDataFetcher extends PlatformDataFetcherAbstract {
 
 
     /**
-     * @param callback
+     * Sets the callback interface to be used for data events and connection updates.
+     *
+     * @param callback the callback instance implementing {@link PlatformDataCallback}
      */
     @Override
     public void setCallback(PlatformDataCallback callback) {
@@ -59,7 +74,9 @@ public class TcpDataFetcher extends PlatformDataFetcherAbstract {
     }
 
     /**
-     * @param port
+     * Sets the communication port for the data platform.
+     *
+     * @param port the port to be used for connections
      */
     @Override
     public void setPort(String port) {
@@ -67,7 +84,9 @@ public class TcpDataFetcher extends PlatformDataFetcherAbstract {
     }
 
     /**
-     * @param baseUrl
+     * Sets the base URL for the platform's API or data endpoint.
+     *
+     * @param baseUrl the base URL of the data source
      */
     @Override
     public void setBaseUrl(String baseUrl) {
@@ -75,9 +94,12 @@ public class TcpDataFetcher extends PlatformDataFetcherAbstract {
     }
 
     /**
-     * @param platformName
-     * @param userId
-     * @param password
+     * Connects to the platform using the provided credentials and starts a background thread {@link #startReaderThread()}
+     * to listen for data.
+     *
+     * @param platformName the name of the platform
+     * @param userId the user ID
+     * @param password the password
      */
     @Override
     public void connect(String platformName, String userId, String password) {
@@ -111,6 +133,9 @@ public class TcpDataFetcher extends PlatformDataFetcherAbstract {
         }
     }
 
+    /**
+     * Starts a thread that continuously reads data from the TCP stream.
+     */
     private void startReaderThread() {
         if (readerThreadStarted.compareAndSet(false, true)) {
             new Thread(() -> {
@@ -140,9 +165,11 @@ public class TcpDataFetcher extends PlatformDataFetcherAbstract {
 
 
     /**
-     * @param platformName
-     * @param userId
-     * @param password
+     * Disconnects from the platform and cancels all active subscriptions.
+     *
+     * @param platformName the name of the platform
+     * @param userId the user ID
+     * @param password the password
      */
     @Override
     public void disconnect(String platformName, String userId, String password) {
@@ -166,8 +193,10 @@ public class TcpDataFetcher extends PlatformDataFetcherAbstract {
 
 
     /**
-     * @param platformName
-     * @param rateName
+     * Subscribes to a specific rate on the platform.
+     *
+     * @param platformName the platform name
+     * @param rateName the rate name to subscribe to
      */
     @Override
     public void subscribe(String platformName, String rateName) {
@@ -205,12 +234,10 @@ public class TcpDataFetcher extends PlatformDataFetcherAbstract {
 
 
     /**
-     * Gelen tokenları kullanarak Rate nesnesini oluşturur.
+     * Parses a received message and converts it into a {@link Rate} object.
      *
-     * tokens[0]: "PF1_EURUSD" -> "PF1" (platform, kontrol amaçlı) ve "EURUSD" (rateName)
-     * tokens[1]: "22:number:<bid>" -> bid değeri
-     * tokens[2]: "25:number:<ask>" -> ask değeri
-     * tokens[3]: "5:timestamp:<timestamp>" -> timestamp değeri
+     * @param tokens the message split into tokens
+     * @return the parsed {@link Rate} object
      */
     private Rate parseRateFromMessage(String[] tokens) {
         try {
@@ -245,8 +272,10 @@ public class TcpDataFetcher extends PlatformDataFetcherAbstract {
 
 
     /**
-     * @param platformName
-     * @param rateName
+     * Unsubscribes from a specific rate on the platform.
+     *
+     * @param platformName Name of the platform.
+     * @param rateName     Name of the rate to unsubscribe from.
      */
     @Override
     public void unsubscribe(String platformName, String rateName) {
