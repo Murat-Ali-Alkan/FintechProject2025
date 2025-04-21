@@ -13,6 +13,7 @@ import java.net.Socket;
 import service.SubscriberManager;
 
 public class ClientHandler {
+
     private Socket socket;
     private PrintWriter out;
     private BufferedReader in;
@@ -21,6 +22,12 @@ public class ClientHandler {
         this.socket = socket;
     }
 
+    /**
+     * This method first authenticates the client.
+     * <p>Then it listens for the inputs from the client which it directs them to {@link #handleClient()}
+     * method for handling clients requests.</p>
+     *
+     */
     public void handleClient() {
         try {
             this.in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
@@ -71,6 +78,16 @@ public class ClientHandler {
 
     }
 
+    /**
+     * This method is used for handling clients request like {@code subscribe|PF1_USDTRY}
+     * <p>Calls {@link SubscriberManager}'s methods
+     * for handling subscribe and unsubscribe requests</p>
+     *
+     * <p>If the command is {@code "exit"} this method returns true and client connection is closed.</p>
+     *
+     * @param command is the request which came from client
+     * @return boolean to decide if it is an exit request or not
+     */
     private boolean handleCommand(String command) {
         boolean isExit = false;
         if (command.startsWith("subscribe|")) {
