@@ -18,6 +18,14 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Child of {@link PlatformDataFetcherAbstract} that communicates with a REST-FULL data provider.
+ * <p>
+ * This class handles authentication, periodic data fetching, subscription management, and
+ * dispatching rate updates via {@link PlatformDataCallback}.
+ * </p>
+ *
+ */
 @Component
 public class RestDataFetcher extends PlatformDataFetcherAbstract{
 
@@ -29,17 +37,33 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
     private String userId;
     private String password;
     private boolean connected = false;
+
+    /**
+     * Used for holding JWT token and making a request with it
+     */
     private HttpEntity<String> requestEntity;
 
+    /**
+     * A {@link Timer} which is used for sending an async request to RESTDataProducer periodically
+     *
+     */
     private final Timer timer = new Timer();
+
+    /**
+     * Used for making HTTP requests
+     */
     private final RestTemplate restTemplate = new RestTemplate();
 
-    // Her rateName için TimerTask referanslarını tutan map
+    /**
+     * Map of {@link TimerTask}s is used for holding information of subscriptions to make periodic requests.
+     */
     private final Map<String, TimerTask> subscriptionTasks = new ConcurrentHashMap<>();
 
 
     /**
-     * @param callback
+     * Sets the callback interface to be used for data events and connection updates.
+     *
+     * @param callback the callback instance implementing {@link PlatformDataCallback}
      */
     @Override
     public void setCallback(PlatformDataCallback callback) {
@@ -47,7 +71,9 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
     }
 
     /**
-     * @param port
+     * Sets the communication port for the data platform.
+     *
+     * @param port the port to be used for connections
      */
     @Override
     public void setPort(String port) {
@@ -55,7 +81,9 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
     }
 
     /**
-     * @param baseUrl
+     * Sets the base URL for the platform's API or data endpoint.
+     *
+     * @param baseUrl the base URL of the data source
      */
     @Override
     public void setBaseUrl(String baseUrl) {
@@ -63,9 +91,12 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
     }
 
     /**
-     * @param platformName
-     * @param userId
-     * @param password
+     * Connects to the RESTFULL platform and retrieves a JWT token for authentication.
+     * Notifies the callback on success or failure.
+     *
+     * @param platformName the name of the platform
+     * @param userId       the user ID (currently not used, hardcoded as 'admin')
+     * @param password     the password (currently not used, hardcoded as 'admin')
      */
     @Override
     public void connect(String platformName, String userId, String password) {
@@ -87,9 +118,12 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
     }
 
     /**
-     * @param platformName
-     * @param userId
-     * @param password
+     * Disconnects from the platform by canceling all active subscriptions {@link #subscriptionTasks} and stopping the timer
+     * {@link #timer}.
+     *
+     * @param platformName the name of the platform
+     * @param userId       the user ID (optional)
+     * @param password     the password (optional)
      */
     @Override
     public void disconnect(String platformName, String userId, String password) {
@@ -112,8 +146,13 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
     }
 
     /**
-     * @param platformName
-     * @param rateName
+     * Subscribes to a specific rate feed from the platform. Data is fetched periodically
+     * using a scheduled {@link #subscriptionTasks}. On first response, {@code onRateAvailable()} is called;
+     * on subsequent responses, {@code onRateUpdate()} is triggered.
+     *
+     * @param platformName the platform name
+     * @param rateName     the specific rate name
+     * @throws ConnectionNotFoundException if not connected to the platform
      */
     @Override
     public void subscribe(String platformName, String rateName) {
@@ -181,8 +220,10 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
     }
 
     /**
-     * @param platformName
-     * @param rateName
+     * Unsubscribes from a specific rate feed by canceling the corresponding {@link #subscriptionTasks}.
+     *
+     * @param platformName the platform name
+     * @param rateName     the rate/feed name
      */
     @Override
     public void unsubscribe(String platformName, String rateName) {
@@ -197,6 +238,13 @@ public class RestDataFetcher extends PlatformDataFetcherAbstract{
         }
     }
 
+    /**
+     * Sends an authentication request to retrieve a JWT token from the REST API.
+     * <p>
+     * Currently uses hardcoded credentials (admin/admin) for demonstration purposes.
+     *
+     * @return the JWT token if authentication is successful, or {@code null} otherwise
+     */
     public String sendTokenRequest() {
         String url = this.baseUrl + "token";
 

@@ -1,7 +1,7 @@
 package com.murat.restproducer.model;
 
 /**
- * A simple DTO (Data Transfer Object) that represents an exchange rate between two currencies.
+ * A simple DTO (Data Transfer Object) that represents an exchange rate.
  *
  * <p>This class contains the core details of an exchange rate including the rate name,
  * bid price, ask price, and the timestamp of when the rate was recorded or updated.</p>

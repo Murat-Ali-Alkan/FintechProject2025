@@ -24,6 +24,24 @@ import org.springframework.stereotype.Component;
 import java.io.InputStream;
 import java.util.*;
 
+/**
+ * The {@code Coordinator} class orchestrates the dynamic loading and management of platform data fetchers,
+ * processes currency rate data, calculates derived currency rates, and publishes rate updates to Kafka topics.
+ * It utilizes a cache for temporary data storage and handles abnormal rate change detection.
+ *
+ * <p>This component is annotated with {@code @Component} for Spring dependency injection and implements
+ * {@link PlatformDataCallback} to receive data-related events from the fetchers.</p>
+ *
+ * Responsibilities include:
+ * <ul>
+ *     <li>Dynamically loading fetchers from YML configuration using reflection</li>
+ *     <li>Handling connection and disconnection to/from data platforms</li>
+ *     <li>Storing and retrieving rate data using {@link CacheManager}</li>
+ *     <li>Detecting abnormal rate changes</li>
+ *     <li>Performing rate calculations using {@link CurrencyService}</li>
+ *     <li>Publishing formatted rates to Kafka using {@link KafkaProducerService}</li>
+ * </ul>
+ */
 @Component
 public class Coordinator implements PlatformDataCallback {
 
@@ -43,21 +61,38 @@ public class Coordinator implements PlatformDataCallback {
 
     private final Timer timer = new Timer();
 
+    /**
+     * Used when calculating the calculated rates
+     */
     private final Set<String> platformNames = new HashSet<>();
 
     private final Map<String,String> ratePlatformNames = new HashMap<>();
 
+    /**
+     * Used when calculating the calculated rates
+     */
     private final Set<String> rateNames = new HashSet<>();
 
     private final CurrencyService currencyService;
 
 
+    /**
+     * Constructor for dependency injection.
+     *
+     * @param cacheManager the cache manager used for storing raw and calculated rate data
+     * @param kafkaProducerService the Kafka producer service used to publish messages
+     * @param currencyService the service used to perform rate calculations
+     */
     public Coordinator(CacheManager cacheManager, KafkaProducerService kafkaProducerService, CurrencyService currencyService) {
         this.cacheManager = cacheManager;
         this.kafkaProducerService = kafkaProducerService;
         this.currencyService = currencyService;
     }
 
+    /**
+     * Initializes the coordinator by reading the fetcher configurations, loading the fetcher classes using reflection,
+     * and establishing connections to platforms.
+     */
     @PostConstruct
     public void init(){
         logger.info("Initializing Coordinator");
@@ -116,6 +151,9 @@ public class Coordinator implements PlatformDataCallback {
         }
     }
 
+    /**
+     * Shuts down the coordinator by disconnecting all fetchers and stopping the timer.
+     */
     @PreDestroy
     public void shutdown() {
         logger.info("Shutting down Coordinator");
@@ -127,8 +165,12 @@ public class Coordinator implements PlatformDataCallback {
 
 
     /**
-     * Yardımcı metod: Rate nesnesini ortak formata çevirir.
-     * Format: platformName|bid|ask|ISO formatlı timestamp
+     * Formats a {@link Rate} object into a standardized string.
+     *
+     * @param platformName the name of the platform (can be null)
+     * @param rateName the name of the rate
+     * @param rate the rate object to format
+     * @return a string in the format platform|bid|ask|timestamp
      */
     private String formatRate(String platformName, String rateName, Rate rate) {
 
@@ -146,6 +188,10 @@ public class Coordinator implements PlatformDataCallback {
 
 
 
+    /**
+     * Attempts to calculate new currency rates from the raw cached rates.
+     * Sends the results to Kafka if successful.
+     */
     public void tryCalculate() {
         Cache cache = cacheManager.getCache("raw_rates");
 
@@ -227,6 +273,10 @@ public class Coordinator implements PlatformDataCallback {
     }
 
 
+    /**
+     * Sets a scheduled timer to repeatedly call {@link #tryCalculate()} every 10 seconds,
+     * starting after a 30-second delay.
+     */
     private void setCalculateTimer() {
         TimerTask task = new TimerTask() {
             @Override
@@ -240,8 +290,11 @@ public class Coordinator implements PlatformDataCallback {
 
 
     /**
-     * @param platformName
-     * @param status
+     * Called when a platform is successfully connected.
+     * Subscribes the appropriate fetcher to the specified currency pairs.
+     *
+     * @param platformName the name of the platform
+     * @param status true if connection was successful
      */
     @Override
     public void onConnect(String platformName, boolean status) {
@@ -278,8 +331,11 @@ public class Coordinator implements PlatformDataCallback {
     }
 
     /**
-     * @param platformName
-     * @param status
+     * Called when a platform is disconnected.
+     * Removes the platform from the active list.
+     *
+     * @param platformName the name of the disconnected platform
+     * @param status true if disconnection was successful
      */
     @Override
     public void onDisconnect(String platformName, boolean status) {
@@ -288,9 +344,12 @@ public class Coordinator implements PlatformDataCallback {
     }
 
     /**
-     * @param platformName
-     * @param rateName
-     * @param rate
+     * Called when a new rate is received from a platform.
+     * Stores the rate in cache and sends the formatted rate to Kafka.
+     *
+     * @param platformName the name of the platform
+     * @param rateName the name of the rate
+     * @param rate the received rate data
      */
     @Override
     public void onRateAvailable(String platformName, String rateName, Rate rate) {
@@ -317,9 +376,12 @@ public class Coordinator implements PlatformDataCallback {
     }
 
     /**
-     * @param platformName
-     * @param rateName
-     * @param rateFields
+     * Called when a rate update is received from a platform.
+     * Checks if the change is abnormal {@link #isRateChangeAbnormal(Rate, Rate)}, and if not, stores and sends the updated rate.
+     *
+     * @param platformName the name of the platform
+     * @param rateName the name of the rate
+     * @param rateFields the updated rate fields
      */
     @Override
     public void onRateUpdate(String platformName, String rateName, RateFields rateFields) {
@@ -353,17 +415,26 @@ public class Coordinator implements PlatformDataCallback {
     }
 
     /**
-     * @param platformName
-     * @param rateName
-     * @param rateStatus
+     * Called when a rate's status is updated.
+     * Logs the new status.
+     *
+     * @param platformName the platform providing the rate
+     * @param rateName the name of the rate
+     * @param rateStatus the new status of the rate
      */
-
     @Override
     public void onRateStatus(String platformName, String rateName, RateStatus rateStatus) {
         logger.info("Rate status for {} - {}: {}", platformName, rateName, rateStatus);
 
     }
 
+    /**
+     * Checks whether the change between two rates is abnormal by comparing bid values.
+     *
+     * @param oldRate the previous rate
+     * @param newRate the updated rate
+     * @return true if the rate change exceeds 1%, false otherwise
+     */
     private boolean isRateChangeAbnormal(Rate oldRate, Rate newRate) {
         double oldBid = oldRate.getBid();
         double newBid = newRate.getBid();

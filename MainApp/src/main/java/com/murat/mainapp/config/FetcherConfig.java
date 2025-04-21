@@ -6,6 +6,13 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+/**
+ * Configuration object for initializing a data fetcher for a specific platform.
+ * <p>
+ * This class holds the necessary settings required to connect and retrieve data from a platform,
+ * such as credentials, supported currency pairs, and the base URL.
+ * </p>
+ */
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
