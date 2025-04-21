@@ -7,11 +7,37 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+/**
+ * Manages subscriber registrations and notifications for currency rate topics.
+ *
+ * <p>This class maintains a mapping of currency rate topics to their subscribers (via {@link PrintWriter}),
+ * and provides functionality to subscribe, unsubscribe, and send notifications based on updates
+ * from {@link ExchangeRateManager}.</p>
+ *
+ * <p>Each notification message includes the topic, current bid and ask prices, and a timestamp.
+ * The system supports two update types: normal and large/abnormal updates.</p>
+ *
+ * @see ExchangeRateManager
+ * @see ConfigLoader
+ */
 public class SubscriberManager {
+
+    /**
+     * Subscribers with rateName - PrintWriter pair
+     */
     private static final Map<String, List<PrintWriter>> subscribers = new HashMap<>();
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+    /**
+     * Total number of active subscribers.
+     * */
     public static int subscriberCount = 0;
 
+    /**
+     * Subscribes a client to a specific currency topic.
+     *
+     * @param topic the currency rateName to subscribe to
+     * @param out the output stream to send messages to the client
+     */
     public static void subscribe(String topic, PrintWriter out) {
         if(!ConfigLoader.checkKey(topic)){
             out.println("ERROR|Rate data not found for " + topic);
@@ -29,6 +55,12 @@ public class SubscriberManager {
         }
     }
 
+    /**
+     * Unsubscribes a client from a specific currency topic.
+     *
+     * @param topic the currency rate topic to unsubscribe from
+     * @param out the output stream associated with the client
+     */
     public static void unsubscribe(String topic, PrintWriter out) {
         if(!ConfigLoader.checkKey(topic)){
             out.println("ERROR|Rate data not found for " + topic);
@@ -47,6 +79,14 @@ public class SubscriberManager {
         }
     }
 
+    /**
+     * Notifies subscribed client with the latest rate for their topic.
+     *
+     * <p>This method fetches either a normal or large/abnormal update from
+     * {@link ExchangeRateManager}, constructs a message, and sends it to subscriber.</p>
+     *
+     * @param isLargeUpdate flag indicating whether the update is large
+     */
     public static void
     notifySubscribers(boolean isLargeUpdate) {
         for (Map.Entry<String, List<PrintWriter>> entry : subscribers.entrySet()) {
