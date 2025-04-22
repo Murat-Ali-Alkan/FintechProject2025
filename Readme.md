@@ -117,6 +117,4 @@ ToyotaProject2025 connects to multiple specialized real-time rate data providers
 - **Security:** JWT
 - **Build Tools:** Maven
 
-## License
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
