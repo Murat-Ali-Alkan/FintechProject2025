@@ -1,6 +1,6 @@
-# ToyotaProject2025
+# FintechProject2025
 ## Project Overview
-ToyotaProject2025 connects to multiple specialized real-time rate data providers (PF1, PF2), aggregates and normalizes incoming rates, computes derived currency pairs (USD/TRY, EUR/TRY), and distributes the data via Kafka. Raw and calculated rates are stored in PostgreSQL and OpenSearch, with Redis caching for fast access.
+FintechProject2025 connects to multiple specialized real-time rate data providers (PF1, PF2), aggregates and normalizes incoming rates, computes derived currency pairs (USD/TRY, EUR/TRY), and distributes the data via Kafka. Raw and calculated rates are stored in PostgreSQL and OpenSearch, with Redis caching for fast access.
 
 ## Key Features
 - Realistic simulation of USDTRY and EURUSD rates from two providers via TCP (PF1) and REST (PF2)
@@ -13,7 +13,7 @@ ToyotaProject2025 connects to multiple specialized real-time rate data providers
 - JWT-based security for RESTProducer endpoints
 
 ## Architecture & Components
-![Architecture Diagram](ToyotaProject2025.drawio.png)
+![Architecture Diagram](FintechProject2025.drawio.png)
 
 
 1. **TCPProducer (PF1)**
